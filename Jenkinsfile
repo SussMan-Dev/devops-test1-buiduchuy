@@ -1,28 +1,20 @@
 def sendTelegram(String message) {
-
     withCredentials([
-        string(
-            credentialsId: 'telegram-token',
-            variable: 'BOT_TOKEN'
-        ),
-        string(
-            credentialsId: 'telegram-chat-id',
-            variable: 'CHAT_ID'
-        )
+        string(credentialsId: 'telegram-token', variable: 'BOT_TOKEN'),
+        string(credentialsId: 'telegram-chat-id', variable: 'CHAT_ID')
     ]) {
-
         withEnv(["TELEGRAM_MESSAGE=${message}"]) {
-
             powershell '''
                 $body = @{
                     chat_id    = $env:CHAT_ID
                     text       = $env:TELEGRAM_MESSAGE
-                    parse_mode = "Markdown"
-                }
+                    parse_mode = 'Markdown'
+                } | ConvertTo-Json
 
                 Invoke-RestMethod `
                     -Uri "https://api.telegram.org/bot$env:BOT_TOKEN/sendMessage" `
                     -Method Post `
+                    -ContentType 'application/json' `
                     -Body $body
             '''
         }
@@ -30,7 +22,6 @@ def sendTelegram(String message) {
 }
 
 pipeline {
-
     agent any
 
     tools {
@@ -38,7 +29,6 @@ pipeline {
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 echo 'Checking out source...'
@@ -49,7 +39,7 @@ pipeline {
         stage('Install dependencies') {
             steps {
                 echo 'Installing dependencies...'
-                bat 'npm install'
+                bat 'npm ci'
             }
         }
 
@@ -62,25 +52,18 @@ pipeline {
 
         stage('Deploy') {
             steps {
-
                 script {
-                    sendTelegram(
-                        """**Deploy Started**
+                    sendTelegram("""**Deploy Started**
 
 🚀 DEPLOY STARTED
-
 Project: devops-test
-Branch: main"""
-                    )
+Branch: ${env.BRANCH_NAME ?: 'main'}""")
                 }
 
                 echo 'Deploying to Netlify...'
 
                 withCredentials([
-                    string(
-                        credentialsId: 'netlify-token',
-                        variable: 'NETLIFY_AUTH_TOKEN'
-                    )
+                    string(credentialsId: 'netlify-token', variable: 'NETLIFY_AUTH_TOKEN')
                 ]) {
                     bat 'npx netlify deploy --prod --dir=dist --auth %NETLIFY_AUTH_TOKEN%'
                 }
@@ -89,33 +72,26 @@ Branch: main"""
     }
 
     post {
-
         success {
             script {
-                sendTelegram(
-                    """**Deploy Success**
+                sendTelegram("""**Deploy Success**
 
 ✅ DEPLOY SUCCESS
-
 Project: devops-test
-Branch: main
-URL: https://thriving-gingersnap-8087ee.netlify.app/"""
-                )
+Branch: ${env.BRANCH_NAME ?: 'main'}
+URL: https://thriving-gingersnap-8087ee.netlify.app/""")
             }
         }
 
         failure {
             script {
-                sendTelegram(
-                    """**Deploy Failed**
+                sendTelegram("""**Deploy Failed**
 
 ❌ DEPLOY FAILED
-
 Project: devops-test
-Branch: main
+Branch: ${env.BRANCH_NAME ?: 'main'}
 
-Please check Jenkins."""
-                )
+Please check Jenkins.""")
             }
         }
     }
