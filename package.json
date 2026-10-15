@@ -2,7 +2,7 @@
   "name": "devops-test",
   "version": "1.0.0",
   "scripts": {
-    "build": "node build.js"
+    "build": "node bla.js"
   },
   "devDependencies": {
     "netlify-cli": "^27.11.1"
