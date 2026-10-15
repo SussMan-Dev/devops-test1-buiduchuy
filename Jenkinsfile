@@ -28,6 +28,10 @@ pipeline {
         nodejs 'NodeJS 24.21.0'
     }
 
+    triggers {
+        githubPush()
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -51,21 +55,25 @@ pipeline {
         }
 
         stage('Deploy') {
+            when {
+                branch 'main'
+            }
             steps {
                 script {
                     sendTelegram("""**Deploy Started**
 
 🚀 DEPLOY STARTED
 Project: devops-test
-Branch: ${env.BRANCH_NAME ?: 'main'}""")
+Branch: main""")
                 }
 
                 echo 'Deploying to Netlify...'
 
                 withCredentials([
-                    string(credentialsId: 'netlify-token', variable: 'NETLIFY_AUTH_TOKEN')
+                    string(credentialsId: 'netlify-token', variable: 'NETLIFY_AUTH_TOKEN'),
+                    string(credentialsId: 'netlify-site-id', variable: 'NETLIFY_SITE_ID')
                 ]) {
-                    bat 'npx netlify deploy --prod --dir=dist --auth %NETLIFY_AUTH_TOKEN%'
+                    bat 'npx netlify deploy --prod --dir=dist --site %NETLIFY_SITE_ID% --auth %NETLIFY_AUTH_TOKEN%'
                 }
             }
         }
@@ -76,10 +84,10 @@ Branch: ${env.BRANCH_NAME ?: 'main'}""")
             script {
                 sendTelegram("""**Deploy Success**
 
-✅ DEPLOY SUCCESS
+✅ DEPLOY SUCCESS NHÉ
 Project: devops-test
-Branch: ${env.BRANCH_NAME ?: 'main'}
-URL: https://thriving-gingersnap-8087ee.netlify.app/""")
+Branch: main
+URL: https://gorgeous-puppy-f0b50d.netlify.app/""")
             }
         }
 
@@ -87,9 +95,9 @@ URL: https://thriving-gingersnap-8087ee.netlify.app/""")
             script {
                 sendTelegram("""**Deploy Failed**
 
-❌ DEPLOY FAILED
+❌ DEPLOY FAILED RỒI
 Project: devops-test
-Branch: ${env.BRANCH_NAME ?: 'main'}
+Branch: main
 
 Please check Jenkins.""")
             }
